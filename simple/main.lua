@@ -5,6 +5,9 @@
 -- Include file funcSoma.lua
 require "funcSoma"
 
+-- Call a shared library with a addFunction (See someFuncForLua.c)
+require "someFunForLua"
+
 -- Emulate a namespace (factory.something)
 local factory = require "objectSimple"
 
@@ -69,6 +72,9 @@ print(instLeo.getAge());
 instLeo.doBirthDay();
 print("Get leo age after one year");
 print(instLeo.getAge());
+
+print("Call super fast C function 1+7= " .. addFast(1,7) );
+
 
 -- Get something from the keyboard
 --someValue = io.read();
