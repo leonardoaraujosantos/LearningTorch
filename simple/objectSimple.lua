@@ -26,5 +26,16 @@ function newPerson(name, age)
     return objectInstance.age;
   end
 
+  --[[
+  -- Overload the <= operator
+  local mt = {
+    __le = function (rhs) -- "<=" event handler
+      objectInstance.age = objectInstance.age + rhs;
+      return { value = objectInstance.age }
+    end
+  }
+  setmetatable(objectInstance, mt) -- use "mt" as the metatable for "x"
+  ]]
+
   return objectInstance;
 end
