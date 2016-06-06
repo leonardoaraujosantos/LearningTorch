@@ -10,8 +10,7 @@ sudo apt-get install liblua5.1-0-dev
 Compiling
 gcc callLuaFromC.c -o callLuaFromC -I/usr/include/lua5.1 -llua5.1
 
-Future notes: Add this arround a mex file and see how to send/receive tables
-lua arrays
+Future notes: Add this arround a mex file and deal with matlab arrays
 */
 #include <stdio.h>
 
@@ -29,9 +28,16 @@ void luaError(lua_State *L, char *msg)
 }
 
 // Used to push an array of integers
-void pushIntegetArray()
+void pushIntegetArray(lua_State *L, int *array, int size)
 {
-
+  lua_newtable(L);
+  int idx;
+  for (idx=0;idx < size; idx++)
+  {
+      lua_pushinteger(L, idx); //-2
+      lua_pushinteger(L, array[idx]); // -3
+      lua_settable(L,-3);
+  }
 }
 
 int main(void)
@@ -63,7 +69,7 @@ int main(void)
 
   // Call function with one argument and one output
   // Push to stack function name
-  printf("SQUARE ###################################################\n");
+  printf("SQUARE ##########################################################\n");
   lua_getglobal(L, "square");
 
   // Push to stack first argument
@@ -95,33 +101,49 @@ int main(void)
   resultLua = lua_tonumber(L, -1);
   printf("Returned number for lua_addSomething(6,4)=%d\n",resultLua);
 
-  printf("SEND ARAY ###################################################\n");
+  printf("SEND ARAY #######################################################\n");
   printf("In C, calling Lua->tweaktable()\n");
-  lua_getglobal(L, "tweaktable");             /* Tell it to run callfuncscript.lua->tweaktable() */
-  lua_newtable(L);                            /* Push empty table onto stack table now at -1 */
-  lua_pushliteral(L, "fname");                /* Push a key onto the stack, table now at -2 */
-  lua_pushliteral(L, "Margie");               /* Push a value onto the stack, table now at -3 */
-  lua_settable(L, -3);                        /* Take key and value, put into table at -3, */
-                                              /*  then pop key and value so table again at -1 */
+  int c_array[] = {10,20,30,40};
+  lua_getglobal(L, "showTableContent");
 
-  lua_pushliteral(L, "lname");                /* Push a key onto the stack, table now at -2 */
-  lua_pushliteral(L, "Martinez");             /* Push a value onto the stack, table now at -3 */
-  lua_settable(L, -3);                        /* Take key and value, put into table at -3, */
-                                              /*  then pop key and value so table again at -1 */
+  pushIntegetArray(L,c_array,4);
+
+  if (lua_pcall(L, 1, 0, 0))                  /* Run function, !!! NRETURN=1 !!! */
+    luaError(L, "lua_pcall() failed");
+
+
+  printf("SEND ARAY GET SCALAR RESULT #####################################\n");
+  printf("In C, calling Lua->tweaktable()\n");
+  lua_getglobal(L, "addTableContent");
+
+  pushIntegetArray(L,c_array,4);
 
   if (lua_pcall(L, 1, 1, 0))                  /* Run function, !!! NRETURN=1 !!! */
     luaError(L, "lua_pcall() failed");
 
-  lua_pushnil(L);
-  const char *k, *v;
-    while (lua_next(L, -2)) {                    /* TABLE LOCATED AT -2 IN STACK */
-        v = lua_tostring(L, -1);                 /* Value at stacktop */
-        lua_pop(L,1);                            /* Remove value */
-        k = lua_tostring(L, -1);                 /* Read key at stacktop, */
-                                                 /* leave in place to guide next lua_next() */
-        printf("Fromc k=>%s<, v=>%s<\n", k, v);
-    }
+  // Gather result (pop one item from stack)
+  resultLua = lua_tonumber(L, -1);
+  printf("Returned number for addTableContent(10,20,30,40)=%d\n",resultLua);
 
+  printf("SEND ARAY GET ARRAY RESULT ######################################\n");
+  printf("In C, calling Lua->tweaktable()\n");
+  lua_getglobal(L, "addOne");
+
+  pushIntegetArray(L,c_array,4);
+
+  if (lua_pcall(L, 1, 1, 0))                  /* Run function, !!! NRETURN=1 !!! */
+    luaError(L, "lua_pcall() failed");
+
+  // Gather result (pop one item from stack)
+  lua_pushnil(L);  /* Make sure lua_next starts at beginning */
+  int k, v;
+  while (lua_next(L, -2)) {                    /* TABLE LOCATED AT -2 IN STACK */
+      v = lua_tonumber(L, -1);                 /* Value at stacktop */
+      lua_pop(L,1);                            /* Remove value */
+      k = lua_tonumber(L, -1);                 /* Read key at stacktop, */
+                                               /* leave in place to guide next lua_next() */
+      printf("On C/C++ array_out[%d]=%d\n", k, v);
+  }
 
   printf("Back in C again\n");
 
